@@ -116,10 +116,9 @@ model_actor:
   - 512
   hide_dim: 256
   diffusion_step_embed_dim: 128   # 扩散步嵌入维度
-  kernel_size: 5 #umamba:5 unet:5
+  kernel_size: 5
   n_groups: 8
   condition_type: "film"
-  mamba_version: "mambavision_v1"
 
 ema:
   _target_: Mix_diffusion_policy.model.diffusion.ema_model.EMAModel
@@ -171,7 +170,7 @@ policy:
   guider_n_obs_steps: 2
   actor_n_obs_steps: 2
   guider_mode: "mlp" #"mlp"/"transformer"
-  actor_mode: "UNet" #"UDit/Umamba1d/UNet/Umamba_new"
+  actor_mode: "UNet" #"UDit/UNet"
   mean_mode: "MF_ssl_ta" #"MF"/"IMF"
   guider_model_cfg: ${model_guider}
   actor_model_cfg: ${model_actor}

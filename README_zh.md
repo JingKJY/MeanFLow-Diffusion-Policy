@@ -22,13 +22,6 @@ Python 导入命名空间为 `Mix_diffusion_policy`。项目与 Python 发行包
 
 ```bash
 sudo apt install -y libosmesa6-dev libgl1-mesa-glx libglfw3 patchelf
-mamba env create -f conda_environment.yaml
-conda activate Mixdiff
-```
-
-也可以使用 Conda 创建环境：
-
-```bash
 conda env create -f conda_environment.yaml
 conda activate Mixdiff
 ```
@@ -41,12 +34,12 @@ pip install "r3m @ git+https://github.com/facebookresearch/r3m.git@b2334e726887f
 pip install -e .
 ```
 
-环境名称区分大小写，请使用 `Mixdiff`。环境文件已经包含 MDP 的运行依赖，包括 Mamba SSM、Open3D、TorchCFM、PyZMQ 和 `ur-analytic-ik`。如果仅运行仿真实验，则不需要启动或安装机器人硬件服务与驱动。
+环境名称区分大小写，请使用 `Mixdiff`。环境文件已经包含 MDP 的运行依赖，包括 Open3D、TorchCFM、PyZMQ 和 `ur-analytic-ik`。如果仅运行仿真实验，则不需要启动或安装机器人硬件服务与驱动。
 
 准备数据集前，可以执行以下命令验证核心环境：
 
 ```bash
-python -c "import torch, diffusers, mamba_ssm, open3d, robosuite, robomimic, r3m; print('MDP environment OK')"
+python -c "import torch, diffusers, open3d, robosuite, robomimic, r3m; print('MDP environment OK')"
 python -c "import Mix_diffusion_policy.policy.Mix_diffusion_policy_mean; print('MDP policy import OK')"
 ```
 

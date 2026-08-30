@@ -27,8 +27,6 @@ from Mix_diffusion_policy.model.diffusion.pointcloud_encoder import PointNetEnco
 import Mix_diffusion_policy.common.transformation as tf
 from Mix_diffusion_policy.common.visual import Color, draw_pcl
 from Mix_diffusion_policy.model.flow.u_dit_mean import RMDiT
-#from Mix_diffusion_policy.model.UMamba.conditional_umamba1d_mean import ConditionalMambaUnet1D
-from Mix_diffusion_policy.model.UMamba.conditional_umamba1d_new import ConditionalMambaUnet1D
 #from Mix_diffusion_policy.model.flow.actor_mean import Actor
 #from Mix_diffusion_policy.model.flow.actor_mean_ssl import Actor
 #from Mix_diffusion_policy.model.flow.actor_mean_ssl_t_a import Actor
@@ -160,37 +158,6 @@ class MixPolicy(BasePcdPolicy):
                 decode_layer=actor_model_cfg['decode_layer'],
                 attn_drop=actor_model_cfg['attn_drop'],
             )
-        elif actor_mode == "Umamba_new":
-            actor_model = ConditionalMambaUnet1D(
-                input_dim=action_dim,
-                global_cond_dim=actor_cond_dim,
-                diffusion_step_embed_dim=actor_model_cfg['diffusion_step_embed_dim'],
-                hide_dim=actor_model_cfg['hide_dim'],
-                kernel_size=actor_model_cfg['kernel_size'],
-                n_groups=actor_model_cfg['n_groups'],
-                condition_type=actor_model_cfg['condition_type'],
-                mamba_version= actor_model_cfg['mamba_version'],
-                decode_layer=actor_model_cfg['decode_layer'],
-                side_layer=actor_model_cfg['side_layer'],
-                mask_ratio=actor_model_cfg['mask_ratio'],
-                depth=actor_model_cfg['n_layer'],
-                horizon=actor_n_obs_steps,
-            )        
-        elif actor_mode == "Umamba1d":           
-            actor_model = ConditionalMambaUnet1D(
-                input_dim=action_dim,
-                global_cond_dim=actor_cond_dim,
-                diffusion_step_embed_dim=actor_model_cfg['diffusion_step_embed_dim'],
-                down_dims=actor_model_cfg['down_dims'],
-                kernel_size=actor_model_cfg['kernel_size'],
-                n_groups=actor_model_cfg['n_groups'],
-                condition_type=actor_model_cfg['condition_type'],
-                use_down_condition=True,
-                use_mid_condition=True,
-                use_up_condition=True,
-                mamba_version= actor_model_cfg['mamba_version'],
-                horizon=actor_n_obs_steps,
-            )  
         elif actor_mode == "UNet":
             if self.mean_mode == "MF_ssl_ta":
                 from Mix_diffusion_policy.model.flow.actor_mean_ssl_t_a import Actor

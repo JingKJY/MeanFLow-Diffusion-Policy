@@ -28,7 +28,6 @@ from Mix_diffusion_policy.model.diffusion.pointcloud_encoder import PointNetEnco
 import Mix_diffusion_policy.common.transformation as tf
 from Mix_diffusion_policy.common.visual import Color, draw_pcl
 from Mix_diffusion_policy.model.flow.u_dit_mean import RMDiT
-#from Mix_diffusion_policy.model.UMamba.conditional_umamba1d_mean import ConditionalMambaUnet1D
 #from Mix_diffusion_policy.model.flow.actor_mean import Actor
 #from Mix_diffusion_policy.model.flow.actor_mean_ssl import Actor
 #from Mix_diffusion_policy.model.flow.actor_mean_ssl_t_a import Actor

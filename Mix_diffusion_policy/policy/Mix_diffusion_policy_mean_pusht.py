@@ -16,7 +16,6 @@ from Mix_diffusion_policy.model.diffusion.mask_generator import LowdimMaskGenera
 from Mix_diffusion_policy.model.flow.actor_mean_ssl_t_a_small import Actor
 from Mix_diffusion_policy.model.flow.dispersive_loss import DispersiveLoss
 from Mix_diffusion_policy.model.flow.u_dit_mean import RMDiT
-from Mix_diffusion_policy.model.UMamba.conditional_umamba1d_new import ConditionalMambaUnet1D
 from Mix_diffusion_policy.common.visual import visual_pushT_pred_subgoals
 
 class MixPolicy(BaseLowdimPolicy):
@@ -40,7 +39,7 @@ class MixPolicy(BaseLowdimPolicy):
                  actor_horizon: int = 16,
                  actor_n_action_steps: int = 8,
                  actor_n_obs_steps: int = 2,
-                 actor_mode: str = "Umamba_new",
+                 actor_mode: str = "UNet",
                  actor_model_cfg: dict = None,
                  actor_hidden_dim: int = 256,
                  actor_cond_dim: int = 128,
@@ -152,37 +151,6 @@ class MixPolicy(BaseLowdimPolicy):
                 n_emb=actor_model_cfg['n_emb'],
                 decode_layer=actor_model_cfg['decode_layer'],
                 attn_drop=actor_model_cfg['attn_drop'],
-            )
-        elif actor_mode == "Umamba_new":
-            self.actor_model = ConditionalMambaUnet1D(
-                input_dim=action_dim,
-                global_cond_dim=actor_cond_dim,
-                diffusion_step_embed_dim=actor_model_cfg['diffusion_step_embed_dim'],
-                hide_dim=actor_model_cfg['hide_dim'],
-                kernel_size=actor_model_cfg['kernel_size'],
-                n_groups=actor_model_cfg['n_groups'],
-                condition_type=actor_model_cfg['condition_type'],
-                mamba_version=actor_model_cfg['mamba_version'],
-                decode_layer=actor_model_cfg['decode_layer'],
-                side_layer=actor_model_cfg['side_layer'],
-                mask_ratio=actor_model_cfg['mask_ratio'],
-                depth=actor_model_cfg['n_layer'],
-                horizon=actor_n_obs_steps,
-            )
-        elif actor_mode == "Umamba1d":
-            self.actor_model = ConditionalMambaUnet1D(
-                input_dim=action_dim,
-                global_cond_dim=actor_cond_dim,
-                diffusion_step_embed_dim=actor_model_cfg['diffusion_step_embed_dim'],
-                down_dims=actor_model_cfg['down_dims'],
-                kernel_size=actor_model_cfg['kernel_size'],
-                n_groups=actor_model_cfg['n_groups'],
-                condition_type=actor_model_cfg['condition_type'],
-                use_down_condition=True,
-                use_mid_condition=True,
-                use_up_condition=True,
-                mamba_version=actor_model_cfg['mamba_version'],
-                horizon=actor_n_obs_steps,
             )
         elif actor_mode == "UNet":
             self.actor_model = Actor(
