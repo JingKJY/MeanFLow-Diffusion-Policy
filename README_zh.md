@@ -98,7 +98,7 @@ python train_mdp.py \
 
 ## 致谢
 
-MDP 使用了 MeanFlow、Diffusion Policy、Robomimic 和 Robosuite 的相关思想与基础设施。使用本项目开展研究时，请引用这些上游项目；MDP 论文的引用信息公布后，也请一并引用。
+MDP 使用了 MeanFlow、Diffusion Policy、Hierarchical Diffusion Policy（HDP）、Robomimic 和 Robosuite 的相关思想与基础设施。使用本项目开展研究时，请引用这些项目；MDP 论文的引用信息公布后，也请一并引用。
 
 ## 许可证
 

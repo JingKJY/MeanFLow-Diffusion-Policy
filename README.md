@@ -98,7 +98,7 @@ Large files are deliberately excluded. Do not commit datasets, checkpoints, W&B 
 
 ## Acknowledgements
 
-MDP builds on concepts and infrastructure from MeanFlow, Diffusion Policy, Robomimic, and Robosuite. Please cite those upstream projects and the associated MDP publication when bibliographic information becomes available.
+MDP builds on concepts and infrastructure from MeanFlow, Diffusion Policy, Hierarchical Diffusion Policy (HDP), Robomimic, and Robosuite. Please cite these projects and the associated MDP publication when bibliographic information becomes available.
 
 ## License
 
