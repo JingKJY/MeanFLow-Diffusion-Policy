@@ -1,0 +1,323 @@
+_target_: Mix_diffusion_policy.workspace.train_workspace_mean_critic.TrainWorkspace
+
+checkpoint:
+  save_last_ckpt: true
+  save_last_snapshot: false
+  topk:
+    format_str: epoch={epoch:04d}-test_mean_score={test_mean_score:.3f}.ckpt
+    k: 0
+    mode: max
+    monitor_key: test_mean_score
+
+dataloader:
+  batch_size: 512
+  num_workers: 1
+  persistent_workers: false
+  pin_memory: true
+  shuffle: true
+  drop_last: true            # 丢弃最后一个不完整批次
+
+dataloader_noshuff:
+  batch_size: 512
+  num_workers: 1
+  persistent_workers: false
+  pin_memory: true
+  shuffle: false
+
+guider_path: "data/models/square-ph/guider_latest.ckpt"
+actor_path: #"data/mean/square-ph/subgoal/guider0.9/actor_latest.ckpt"
+critic_path: "data/mean/square-ph/critic_latest_0.001.ckpt"
+test_actor_path: "data/outputs/2026.05.19/20.43.17_train_diffusion_mix_pcd_actor_square_ph_seed42_allDemo/checkpoints"
+train_model: actor #guider/actor
+name_remark: allDemo
+
+logging:
+  group: null
+  id: null
+  mode: offline
+  name: square_ph_seed${training.seed}_${name_remark}
+  project: Mix_diffusion_policy_simple
+  resume: false
+
+test_guider: false
+test_run: false
+test_fps: false
+test_critic: false
+
+max_train_episodes: null
+use_subgoal: true
+use_pcd: true # 只限制actor
+single_step_reverse_diffusion: true
+eta: 0.001
+subgoal_dim: 8
+subgoal_dim_nocont: 6
+
+n_action_steps: 8
+horizon: 16
+Tr: 8
+n_latency_steps: 0
+observation_history_num: 2
+name: train_diffusion_mix_pcd_${train_model}
+
+optimizer_guider:
+  _target_: torch.optim.AdamW  
+  betas:
+  - 0.95
+  - 0.999
+  eps: 1.0e-08
+  lr: 0.0001
+  weight_decay: 1.0e-06
+
+optimizer_actor:
+  _target_: torch.optim.AdamW
+  betas:
+  - 0.95
+  - 0.999
+  eps: 1.0e-08
+  lr: 0.0001
+  weight_decay: 1.0e-06 #0.01
+
+optimizer_critic:
+  _target_: torch.optim.AdamW
+  betas:
+  - 0.95
+  - 0.999
+  eps: 1.0e-08
+  lr: 0.002
+  weight_decay: 1.0e-06
+
+model_guider:
+  input_dim: 8               # Guider输入维度（key_state维度，与数据集一致）
+  output_dim: 8              # Guider输出维度（与输入维度一致）
+  horizon: 1                # 预测 horizon（action_step）
+  n_obs_steps: 1             # 观测步数（用1步观测预测目标） 
+  cond_dim: 128              # 条件维度（Encoder输出维度一致）
+  n_layer: 1                 # Transformer层数
+  n_head: 8                  # 注意力头数
+  n_emb: 128                 # 嵌入维度
+  p_drop_emb: 0            # 嵌入层 dropout
+  p_drop_attn: 0.3           # 注意力层 dropout
+  causal_attn: true          # 是否使用因果注意力（时序预测）
+  time_as_cond: true         # 是否将时间步作为条件
+  obs_as_cond: true          # 是否将观测作为条件
+  n_cond_layers: 0           # 条件处理层数  
+
+
+model_actor:
+  input_dim: 10               # Actor输入维度（0表示仅用全局条件）
+  local_cond_dim: null       # 局部条件维度（null表示无）
+  global_cond_dim: 136       # 全局条件维度 256   64+64+8
+  n_head: 8 #8 8
+  n_emb: 256
+  attn_drop: 0.3
+  
+  n_layer: 4 #12 15
+  side_layer: 2
+  mask_ratio: 
+  - 0.1 #t
+  - 0.2 #t_rand
+  - 0.2 #a
+  - 0.2 #a_rand
+  decode_layer: 1
+  type_ssl: "t_a" #t/a/t_a
+  cat_ratio: 0.5
+
+  down_dims:  
+  - 128
+  - 256
+  - 512
+  hide_dim: 256
+  diffusion_step_embed_dim: 128   # 扩散步嵌入维度
+  kernel_size: 5 #umamba:5 unet:5
+  n_groups: 8
+  condition_type: "film"
+  mamba_version: "mambavision_v1"
+
+ema:
+  _target_: Mix_diffusion_policy.model.diffusion.ema_model.EMAModel
+  inv_gamma: 1.0
+  max_value: 0.9999
+  min_value: 0.0
+  power: 0.75
+  update_after_step: 0
+
+guider_noise_scheduler:
+  _target_: diffusers.schedulers.scheduling_ddpm.DDPMScheduler
+  num_train_timesteps: 100  # 训练时时间步总数
+  beta_start: 0.0001         # 初始beta值
+  beta_end: 0.02             # 最终beta值
+  beta_schedule: "squaredcos_cap_v2"  # beta调度方式（线性）"linear" 
+  variance_type: "fixed_small" # 噪声方差类型：fixed_small/fixed_large
+  prediction_type: "epsilon" # 预测目标（噪声epsilon）sample
+
+guider_pcd_encoder:
+  _target_: Mix_diffusion_policy.model.diffusion.pointcloud_encoder.PointNetEncoder
+  input_dim: 6 #obs_dim*pcd_dim
+  mlp_dims:
+  - 64
+  - 128
+  - 256
+
+actor_pcd_encoder:
+  _target_: Mix_diffusion_policy.model.diffusion.pointcloud_encoder.PointNetEncoder
+  input_dim: 3 #pcd_dim
+  mlp_dims:
+  - 64
+  - 128  
+  #- 256
+
+#actor_pcd_encoder:
+#    in_channels: 3
+#    out_channels: 128
+#    use_layernorm: true
+#    final_norm: layernorm # layernorm, none
+#    normal_channel: false  
+
+policy:
+  _target_: Mix_diffusion_policy.policy.Mix_diffusion_policy_mean_critic.MixPolicy
+  next_action_mode: dataset  #! dataset/pred_local/pred_global
+  guider_horizon: 1
+  actor_horizon: 16
+  guider_n_action_steps: 1
+  actor_n_action_steps: 8
+  guider_n_obs_steps: 2
+  actor_n_obs_steps: 2
+  guider_mode: "mlp" #"mlp"/"transformer"
+  actor_mode: "UNet" #"UDit/Umamba1d/UNet/Umamba_new"
+  mean_mode: "MF" #"MF"/"IMF"
+  guider_model_cfg: ${model_guider}
+  actor_model_cfg: ${model_actor}
+  guider_pcd_encoder: ${guider_pcd_encoder}
+  actor_pcd_encoder: ${actor_pcd_encoder}
+  pcd_dim: 3
+  state_dim: 27 #state_dim*obs_steps
+  subgoal_dim: ${subgoal_dim}
+  film_dim: 256
+  action_dim: 10
+  horizon: ${horizon}
+  subgoal_dim_nocont: ${subgoal_dim_nocont}
+  guider_hidden_dim: 256
+  actor_hidden_dim: 256
+  guider_cond_dim: 512
+  actor_cond_dim: 128  #136 128
+  guider_noise_scheduler: ${guider_noise_scheduler}
+  MeanFlow:
+    jvp_api: 'autograd' #funtorch
+    time_dist: ['uniform', -0.4, 1.0] #['marginal', 0.8, 1.0]uniform
+    sample_type: 't_r' # t_c/t_r
+    flow_ratio: 0.5
+    num_inference_step: 1
+    cfg_ratio: 0.10
+    cfg_scale: 2
+    cfg_uncond: 'u'
+    cond_ratio: 0.1
+  use_subgoal: true #actor_encoder
+  ssl_weight: 0.5
+  dispersive_loss_cfg:
+    dispersive_loss_weight: 0.1
+    dispersive_loss_type: 'infonce_l2'
+    dispersive_temperature: 0.1
+    dispersive_margin: 1.0
+  apply_dispersive_to_embeddings: false
+  apply_dispersive_to_latents: false
+  critic_n_action_steps: 8       # 评估多少个连续动作 (Tr)
+  discount: 0.95                 # TD 折扣因子
+  eta: 0 #0.0001/0.001*/0.01                    # Actor 中 Q 损失的权重（默认0，不启用）
+  fin_rad: 0.008
+  single_step_flow: true
+
+
+task:
+  abs_action: true
+  action_dim: 10
+  dataset:
+    _target_: Mix_diffusion_policy.dataset.robomimic_replay_dataset.RobomimicReplayDataset
+    max_train_episodes: ${max_train_episodes} #! 默认null(200)
+    max_demo: 500
+    Tr: ${Tr}
+    use_subgoal: ${use_subgoal}
+    observation_history_num: ${observation_history_num}
+    abs_action: true
+    dataset_path: data/robomimic/datasets/square/ph/low_dim_abs_pcd.hdf5
+    horizon: ${horizon}
+    obs_keys:
+    - object
+    ###- robot0_joint_pos
+    - robot0_eef_pos
+    - robot0_eef_quat
+    - robot0_gripper_qpos
+    pad_after: 7
+    pad_before: 1
+    rotation_rep: rotation_6d
+    seed: 42
+    val_ratio: 0.02
+  dataset_path: data/robomimic/datasets/square/ph/low_dim_abs_pcd.hdf5
+  dataset_type: ph
+  env_runner:
+    _target_: Mix_diffusion_policy.env_runner.robomimic_runner.RobomimicRunner
+    abs_action: true
+    crf: 22
+    dataset_path: data/robomimic/datasets/square/ph/low_dim_abs_pcd.hdf5
+    fps: 10
+    max_steps: 400
+    use_subgoal: ${use_subgoal}
+    use_pcd: ${use_pcd}
+    n_action_steps: ${n_action_steps}
+    n_envs: 14
+    n_latency_steps: 0
+    observation_history_num: 2
+    n_test: 50
+    n_test_vis: 0
+    n_train: 0
+    n_train_vis: 0
+    obs_keys:
+    - object
+    ##- robot0_joint_pos
+    - robot0_eef_pos
+    - robot0_eef_quat
+    - robot0_gripper_qpos
+    past_action: false
+    render_hw:
+    - 128
+    - 128
+    test_start_seed: 100000
+    train_start_idx: 0
+    test_run: ${test_run}
+  name: square_pcd
+  obs_keys:
+  - object
+  ###- robot0_joint_pos
+  - robot0_eef_pos
+  - robot0_eef_quat
+  - robot0_gripper_qpos
+  task_name: square
+
+training:
+  checkpoint_every: 50
+  debug: false
+  visual_data: true
+  device: cuda:0
+  gradient_accumulate_every: 1
+  lr_scheduler: cosine #linear
+  lr_warmup_steps: 500
+  max_train_steps: null
+  max_val_steps: null
+  num_epochs: 3000
+  num_steps: 300000 #!
+  resume: true
+  rollout_every: 50
+  updateAction_every: 10
+  sample_every: 5
+  seed: 42
+  tqdm_interval_sec: 1.0
+  use_ema: true
+  val_every: 1
+
+val_dataloader:
+  batch_size: 512
+  num_workers: 1
+  persistent_workers: false
+  pin_memory: true
+  shuffle: false
+  drop_last: true
+

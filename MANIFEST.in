@@ -1,0 +1,4 @@
+include README.md README_zh.md LICENSE conda_environment.yaml
+recursive-include Mix_diffusion_policy/config *.yaml
+recursive-include Mix_diffusion_policy/env *.txt *.xml *.stl *.obj *.mtl *.dae *.png *.jpg
+global-exclude __pycache__ *.py[cod] *.blend *.blend1

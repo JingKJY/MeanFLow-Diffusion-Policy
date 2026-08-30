@@ -1,0 +1,311 @@
+_target_: Mix_diffusion_policy.workspace.train_workspace_mean_real.TrainWorkspace
+
+checkpoint:
+  save_last_ckpt: true
+  save_last_snapshot: false
+  topk:
+    format_str: epoch={epoch:04d}-test_mean_score={test_mean_score:.3f}.ckpt
+    k: 0
+    mode: max
+    monitor_key: test_mean_score
+
+dataloader:
+  batch_size: 512
+  num_workers: 1
+  persistent_workers: false
+  pin_memory: true
+  shuffle: true
+  drop_last: true            # 丢弃最后一个不完整批次
+
+dataloader_noshuff:
+  batch_size: 512
+  num_workers: 1
+  persistent_workers: false
+  pin_memory: true
+  shuffle: false
+
+guider_path: #"data/model/cylinder-place-any/guider/guider_latest.ckpt"
+actor_path: #"data/mean/cylinder-ring/nosubgoal/actor_latest.ckpt"
+test_actor_path: #"data/mean/square-mh/subgoal"
+train_model: actor #guider/actor
+name_remark: allDemo
+
+logging:
+  group: null
+  id: null
+  mode: offline
+  name: square_mh_seed${training.seed}_${name_remark}
+  project: Mix_diffusion_policy_simple
+  resume: false
+
+test_guider: true
+test_run: false
+test_times: 10
+test_fps: false
+
+max_train_episodes: null
+use_subgoal: true
+use_pcd: true # 只限制actor
+single_step_reverse_diffusion: true
+eta: 0.001
+subgoal_dim: 6
+subgoal_dim_nocont: 6
+
+n_action_steps: 8
+horizon: 16
+Tr: 8
+n_latency_steps: 0
+observation_history_num: 2
+name: train_diffusion_mix_pcd_${train_model}
+
+optimizer_guider:
+  _target_: torch.optim.AdamW  
+  betas:
+  - 0.95
+  - 0.999
+  eps: 1.0e-08
+  lr: 0.001
+  weight_decay: 1.0e-06
+
+optimizer_actor:
+  _target_: torch.optim.AdamW
+  betas:
+  - 0.95
+  - 0.999
+  eps: 1.0e-08
+  lr: 0.0001
+  weight_decay: 1.0e-06 #0.01
+
+
+model_guider:
+  input_dim: 8               # Guider输入维度（key_state维度，与数据集一致）
+  output_dim: 8              # Guider输出维度（与输入维度一致）
+  horizon: 1                # 预测 horizon（action_step）
+  n_obs_steps: 1             # 观测步数（用1步观测预测目标） 
+  cond_dim: 128              # 条件维度（Encoder输出维度一致）
+  n_layer: 1                 # Transformer层数
+  n_head: 8                  # 注意力头数
+  n_emb: 128                 # 嵌入维度
+  p_drop_emb: 0            # 嵌入层 dropout
+  p_drop_attn: 0.3           # 注意力层 dropout
+  causal_attn: true          # 是否使用因果注意力（时序预测）
+  time_as_cond: true         # 是否将时间步作为条件
+  obs_as_cond: true          # 是否将观测作为条件
+  n_cond_layers: 0           # 条件处理层数  
+
+
+model_actor:
+  input_dim: 10               # Actor输入维度（0表示仅用全局条件）
+  local_cond_dim: null       # 局部条件维度（null表示无）
+  global_cond_dim: 136       # 全局条件维度 256   64+64+8
+  n_head: 8 #8 8
+  n_emb: 256
+  attn_drop: 0.3
+  
+  n_layer: 4 #12 15
+  side_layer: 2
+  mask_ratio: 
+  - 0.1 #t
+  - 0.2 #t_rand
+  - 0.2 #a
+  - 0.2 #a_rand
+  decode_layer: 1
+  type_ssl: "t_a" #t/a/t_a
+
+  down_dims:  
+  - 128
+  - 256
+  - 512
+  hide_dim: 256
+  diffusion_step_embed_dim: 128   # 扩散步嵌入维度
+  kernel_size: 5 #umamba:5 unet:5
+  n_groups: 8
+  condition_type: "film"
+  mamba_version: "mambavision_v1"
+
+ema:
+  _target_: Mix_diffusion_policy.model.diffusion.ema_model.EMAModel
+  inv_gamma: 1.0
+  max_value: 0.9999
+  min_value: 0.0
+  power: 0.75
+  update_after_step: 0
+
+guider_noise_scheduler:
+  _target_: diffusers.schedulers.scheduling_ddpm.DDPMScheduler
+  num_train_timesteps: 100  # 训练时时间步总数
+  beta_start: 0.0001         # 初始beta值
+  beta_end: 0.02             # 最终beta值
+  beta_schedule: "squaredcos_cap_v2"  # beta调度方式（线性）"linear" 
+  variance_type: "fixed_small" # 噪声方差类型：fixed_small/fixed_large
+  prediction_type: "epsilon" # 预测目标（噪声epsilon）sample
+
+guider_pcd_encoder:
+  _target_: Mix_diffusion_policy.model.diffusion.pointcloud_encoder.PointNetEncoder_D
+  input_dim: 6 #obs_dim*pcd_dim
+  mlp_dims:
+  - 64
+  - 128
+  - 256
+
+actor_pcd_encoder:
+  _target_: Mix_diffusion_policy.model.diffusion.pointcloud_encoder.PointNetEncoder_D
+  input_dim: 3 #pcd_dim
+  mlp_dims:
+  - 64
+  - 128  
+  #- 256
+
+#actor_pcd_encoder:
+#    in_channels: 3
+#    out_channels: 128
+#    use_layernorm: true
+#    final_norm: layernorm # layernorm, none
+#    normal_channel: false  
+
+policy:
+  _target_: Mix_diffusion_policy.policy.Mix_diffusion_policy_mean_real.MixPolicy
+  next_action_mode: dataset  #! dataset/pred_local/pred_global
+  guider_horizon: 1
+  actor_horizon: 16
+  guider_n_action_steps: 1
+  actor_n_action_steps: 8
+  guider_n_obs_steps: 2
+  actor_n_obs_steps: 2
+  guider_mode: "mlp_new" #"mlp"/"transformer"
+  actor_mode: "UNet" #"UDit/Umamba1d/UNet/Umamba_new"
+  mean_mode: "MF" #"MF"/"IMF"
+  guider_model_cfg: ${model_guider}
+  actor_model_cfg: ${model_actor}
+  guider_pcd_encoder: ${guider_pcd_encoder}
+  actor_pcd_encoder: ${actor_pcd_encoder}
+  pcd_dim: 3
+  state_dim: 13 #state_dim*obs_steps/20
+  subgoal_dim: ${subgoal_dim}
+  film_dim: 256
+  action_dim: 10 #actions_ee:10 actions_joint:7
+  horizon: ${horizon}
+  subgoal_dim_nocont: ${subgoal_dim_nocont}
+  guider_hidden_dim: 256
+  actor_hidden_dim: 256
+  guider_cond_dim: 512
+  actor_cond_dim: 128  #136 128
+  guider_noise_scheduler: ${guider_noise_scheduler}
+  MeanFlow:
+    jvp_api: 'autograd' #funtorch
+    time_dist: ['uniform', -0.4, 1.0] #['marginal', 0.8, 1.0]uniform
+    sample_type: 't_r' # t_c/t_r
+    flow_ratio: 0.5
+    num_inference_step: 1
+    cfg_ratio: 0.10
+    cfg_scale: 3
+    cfg_uncond: 'u'
+  use_subgoal: false #actor_encoder
+  ssl_weight: 0.5
+  dispersive_loss_cfg:
+    dispersive_loss_weight: 0.1
+    dispersive_loss_type: 'infonce_l2'
+    dispersive_temperature: 0.1
+    dispersive_margin: 1.0
+  apply_dispersive_to_embeddings: false
+  apply_dispersive_to_latents: false
+
+
+
+task:
+  abs_action: true
+  action_dim: 10 #actions_ee:10 actions_joint:7
+  dataset:
+    _target_: Mix_diffusion_policy.dataset.replay_dataset_real_2.CustomReplayDataset
+    max_train_episodes: ${max_train_episodes} #! 默认null(200)
+    max_demo: 200
+    Tr: ${Tr}
+    use_subgoal: ${use_subgoal}
+    subgoal_extractor: 'ring_event'
+    drop_return_reset: true
+    observation_history_num: ${observation_history_num}
+    action_key: 'actions_ee'
+    abs_action: true
+    dataset_path: data/real/cylinder_ring_noarm/gello_dataset.h5
+    horizon: ${horizon}
+    obs_keys:
+    - state_ee
+    - state_joint
+    pad_after: 7
+    pad_before: 1
+    rotation_rep: rotation_6d
+    seed: 42
+    val_ratio: 0.02
+  dataset_path: data/real/cylinder_ring_noarm/gello_dataset.h5
+  dataset_type: mh
+
+# 真实机器人运行配置
+env_runner:
+  _target_: Mix_diffusion_policy.env_runner.real_env_runner.RealEnvRunner
+  # 环境实例化参数（RealEnv）
+  env:
+    _target_: Mix_diffusion_policy.env.real.real_env_new.RealEnv
+    env_client:
+      _target_: Mix_diffusion_policy.env.real.real_env_new.ZMQEnvClient
+      port: 5555
+      host: 127.0.0.1
+    control_rate_hz: 20   # 控制频率，与下面的 control_hz 保持一致
+
+  # RealEnvWrapper 相关参数
+  action_key: actions_ee      # 可选 actions_joint 或 actions_ee
+  obs_keys:
+    - state_ee
+    - state_joint
+  abs_action: true                # 是否使用绝对动作（true 时需结合 action_key）
+  rotation_rep: rotation_6d       # 旋转表示，当 action_key=actions_ee 时生效
+  observation_history_num: 2      # 观测历史堆叠帧数
+  use_subgoal: true               # 是否使用子目标预测
+  use_rgb: false                  # true时真实点云输入为xyzrgb(6D)，需匹配pcd_dim=6的模型
+  camera_names: [base, wrist]     # 使用的相机名称（点云会拼接）
+  ik_solver: null                 # 若 action_key=actions_ee，需提供 IK 求解器实例
+  control_hz: 20.0               # 控制频率（Hz）
+  gripper_max_open: 0.085         # 夹爪最大开度（米）
+  reset_target_joints: [1.57, -1.57, 1.57, -1.57, -1.57, 0, 0]  # 重置时目标关节角度（8DOF 示例）
+  reset_steps: 40                 # 移动到重置位置的插值步数
+  reset_max_step_delta: 0.05      # 单步最大关节变化量（rad）
+  check_action_delta_limit: true  # 是否检查动作变化超出限幅
+  action_delta_limit: 0.5        # 动作变化上限（rad），当 check_action_delta_limit=true 时生效
+
+
+  # 运行参数
+  max_steps: 2000                # 一次 rollout 最大步数（策略执行次数，每个策略步可能包含多步环境步）
+  n_action_steps: 8            # 策略每次输出的动作序列长度
+  n_latency_steps: 0             # 需要丢弃的初始动作步数（补偿延迟）
+  visualize_pcd_subgoal: true    # test_run时每次推理可视化当前点云和预测subgoal
+  visualize_every: 1             # 每隔多少个策略step刷新一次可视化
+  visualize_point_size: 2.0
+  visualize_subgoal_radius: 0.015
+
+training:
+  checkpoint_every: 50
+  debug: false
+  visual_data: true
+  device: cuda:0
+  gradient_accumulate_every: 1
+  lr_scheduler: cosine #linear
+  lr_warmup_steps: 500
+  max_train_steps: null
+  max_val_steps: null
+  num_epochs: 3000
+  num_steps: 300000 #!
+  resume: true
+  rollout_every: 50
+  updateAction_every: 10
+  sample_every: 5
+  seed: 42
+  tqdm_interval_sec: 1.0
+  use_ema: true
+  val_every: 1
+
+val_dataloader:
+  batch_size: 512
+  num_workers: 1
+  persistent_workers: false
+  pin_memory: true
+  shuffle: false
+  drop_last: true
