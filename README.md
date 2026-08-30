@@ -87,9 +87,8 @@ The checked-in host is `127.0.0.1` as a safe placeholder. Verify workspace limit
 
 | Group | Configurations |
 | --- | --- |
-| Push-T | `Mix_pusht.yaml`, `Mix_pusht_critic.yaml` |
+| Push-T | `Mix_pusht.yaml` |
 | Robomimic | can, lift, square, and tool-hang variants |
-| Non-prehensile | `Mix_tilt.yaml` |
 | Real robot | block stacking, cylinder insertion/placement/ring variants |
 
 ## Data and generated outputs

@@ -87,9 +87,8 @@ python train_mdp.py \
 
 | 分类 | 配置文件 |
 | --- | --- |
-| Push-T | `Mix_pusht.yaml`、`Mix_pusht_critic.yaml` |
+| Push-T | `Mix_pusht.yaml` |
 | Robomimic | Can、Lift、Square 和 Tool Hang 相关配置 |
-| 非抓取操作 | `Mix_tilt.yaml` |
 | 实物机器人 | 方块堆叠、圆柱插入、放置和套环相关配置 |
 
 ## 数据和生成文件
