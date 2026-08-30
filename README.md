@@ -22,12 +22,33 @@ The code is intended for Linux with an NVIDIA GPU. The tested environment uses U
 
 ```bash
 sudo apt install -y libosmesa6-dev libgl1-mesa-glx libglfw3 patchelf
+mamba env create -f conda_environment.yaml
+conda activate Mixdiff
+```
+
+Conda may be used instead of Mamba:
+
+```bash
 conda env create -f conda_environment.yaml
-conda activate mdp
+conda activate Mixdiff
+```
+
+Following HDP's installation layout, install the two pinned third-party packages separately. Keeping this step outside `conda_environment.yaml` makes third-party build or network failures easier to diagnose:
+
+```bash
+pip install "robosuite @ git+https://github.com/ARISE-Initiative/robosuite.git@277ab9588ad7a4f4b55cf75508b44aa67ec171f0"
+pip install "r3m @ git+https://github.com/facebookresearch/r3m.git@b2334e726887fa0206962d7984c69c5fb09cceab"
 pip install -e .
 ```
 
-Some real-robot modules additionally require `pyzmq`, `open3d`, and a compatible `ur-analytic-ik` installation. Hardware dependencies are not needed for simulation-only use.
+The environment name is case-sensitive: use `Mixdiff`. The supplied environment installs the MDP runtime dependencies, including Mamba SSM, Open3D, TorchCFM, PyZMQ, and `ur-analytic-ik`. Hardware services and drivers are not needed for simulation-only use.
+
+Verify the core installation before preparing datasets:
+
+```bash
+python -c "import torch, diffusers, mamba_ssm, open3d, robosuite, robomimic, r3m; print('MDP environment OK')"
+python -c "import Mix_diffusion_policy.policy.Mix_diffusion_policy_mean; print('MDP policy import OK')"
+```
 
 ## Data layout
 
